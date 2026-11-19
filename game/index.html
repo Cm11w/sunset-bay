@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Sunset Bay — Open-World Crime Game</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14101c; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .panel { background: rgba(12, 10, 20, 0.72); color: #f5efe6; border: 1px solid rgba(255, 170, 80, 0.35); border-radius: 10px; backdrop-filter: blur(2px); }
+  #hud { position: fixed; inset: 0; pointer-events: none; display: none; }
+  #hud-top-left { position: absolute; top: 14px; left: 14px; padding: 10px 14px; min-width: 240px; }
+  #health-bar { width: 220px; height: 12px; background: #222; border-radius: 6px; overflow: hidden; margin: 4px 0 8px; }
+  #health-fill { height: 100%; width: 100%; background: #4caf50; transition: width 0.2s; }
+  #money { font-size: 22px; font-weight: 800; color: #7ddf8a; }
+  .stars { font-size: 20px; letter-spacing: 3px; color: #888; }
+  .stars.hot { color: #ffcf3f; text-shadow: 0 0 8px rgba(255, 200, 60, 0.8); }
+  #wanted-label { font-size: 12px; color: #ffb3b3; }
+  #hud-top-right { position: absolute; top: 14px; right: 14px; padding: 10px 14px; text-align: right; }
+  #clock { font-size: 22px; font-weight: 800; }
+  #radio { font-size: 12px; color: #ffcf8a; }
+  #hud-bottom-left { position: absolute; left: 14px; bottom: 14px; padding: 10px 14px; max-width: 480px; }
+  #mission { font-size: 15px; font-weight: 600; color: #ffe9a8; }
+  #packages { font-size: 12px; color: #cfc8b8; margin-top: 4px; }
+  #hud-bottom-right { position: absolute; right: 14px; bottom: 14px; text-align: right; }
+  #minimap { width: 200px; height: 200px; border: 2px solid rgba(255, 170, 80, 0.5); border-radius: 8px; background: #0a0e18; }
+  #speed { font-size: 20px; font-weight: 800; margin-top: 6px; text-shadow: 0 1px 4px #000; color: #fff; }
+  #toast { position: absolute; left: 50%; top: 150px; transform: translateX(-50%); padding: 8px 18px; font-size: 15px; font-weight: 600; transition: opacity 0.3s; opacity: 0; max-width: 720px; text-align: center; }
+  #banner { position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%); padding: 18px 34px; text-align: center; display: none; }
+  #banner-title { font-size: 34px; font-weight: 900; letter-spacing: 2px; color: #ffd34d; }
+  #banner-sub { font-size: 15px; color: #f5efe6; margin-top: 6px; }
+  .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: linear-gradient(160deg, rgba(30, 10, 40, 0.42), rgba(10, 10, 30, 0.52)); color: #f5efe6; z-index: 10; }
+  .overlay .card { max-width: 620px; padding: 34px 40px; text-align: center; }
+  .overlay h1 { margin: 0 0 4px; font-size: 52px; font-weight: 900; letter-spacing: 3px; background: linear-gradient(90deg, #ffb347, #ff5e62, #c86bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .overlay h2 { margin: 0 0 14px; font-size: 15px; font-weight: 500; color: #ffd9a0; letter-spacing: 1px; }
+  .overlay p { font-size: 14px; line-height: 1.55; color: #ddd6c8; }
+  .controls { text-align: left; display: inline-block; font-size: 13px; line-height: 1.8; color: #e8e0d0; margin: 10px 0 18px; }
+  .controls b { color: #ffd34d; }
+  button { pointer-events: auto; cursor: pointer; font-size: 16px; font-weight: 700; color: #1a0f00; background: linear-gradient(90deg, #ffb347, #ff8c42); border: none; border-radius: 8px; padding: 12px 26px; margin: 4px; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.secondary { background: #3a3f52; color: #f5efe6; }
+  #end-title { font-size: 44px; font-weight: 900; margin: 0 0 10px; }
+  #end-lines { font-size: 15px; line-height: 1.7; color: #ddd6c8; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Sunset Bay: an open-world crime game. Walk, drive, steal cars, outrun the police and finish 8 story missions."></canvas>
+<p id="status" role="status" aria-live="polite"></p>
+
+<div id="hud">
+  <div id="hud-top-left" class="panel">
+    <div id="health-bar"><div id="health-fill"></div></div>
+    <div id="money">$250</div>
+    <div id="wanted" class="stars">☆☆☆☆☆</div>
+    <div id="wanted-label">Clean</div>
+  </div>
+  <div id="hud-top-right" class="panel">
+    <div id="clock">17:24</div>
+    <div id="radio">Bay FM — Synthwave</div>
+  </div>
+  <div id="hud-bottom-left" class="panel">
+    <div id="mission">Press R to start the next mission</div>
+    <div id="packages">Packages 0/10</div>
+  </div>
+  <div id="hud-bottom-right">
+    <canvas id="minimap" width="200" height="200"></canvas>
+    <div id="speed">ON FOOT</div>
+  </div>
+  <div id="toast" class="panel"></div>
+  <div id="banner" class="panel">
+    <div id="banner-title"></div>
+    <div id="banner-sub"></div>
+  </div>
+</div>
+
+<div id="title-screen" class="overlay" style="display:flex">
+  <div class="card panel">
+    <h1>SUNSET BAY</h1>
+    <h2>AN OPEN-WORLD CRIME GAME &middot; STARRING JAX MARLOWE</h2>
+    <p>New in town, in debt to Mama Rosa, and already on the Bay PD's list. Drive, steal,
+       outrun the helicopter, and work your way up through 8 story missions to become the
+       King of the Bay. A fully original game — no real city, no real people, no licensed music.</p>
+    <div class="controls">
+      <b>W A S D</b> walk / drive &nbsp; <b>Shift</b> run &nbsp; <b>Space</b> jump / handbrake<br>
+      <b>E</b> enter / exit car (steal it if occupied) &nbsp; <b>F</b> punch<br>
+      <b>Mouse drag</b> camera &nbsp; <b>Wheel</b> zoom &nbsp; <b>R</b> radio / start mission<br>
+      <b>P / Esc</b> pause &nbsp; <b>T</b> retry mission
+    </div>
+    <div>
+      <button id="btn-new">New Game</button>
+      <button id="btn-continue" class="secondary" disabled>Continue</button>
+    </div>
+    <p style="font-size:12px;color:#9a93a8">Progress saves automatically to this browser.</p>
+  </div>
+</div>
+
+<div id="pause-screen" class="overlay">
+  <div class="card panel">
+    <h1 style="font-size:36px">PAUSED</h1>
+    <p>Sunset Bay waits for no one — except right now.</p>
+    <div class="controls">
+      <b>W A S D</b> walk / drive &nbsp; <b>Shift</b> run &nbsp; <b>Space</b> jump / handbrake<br>
+      <b>E</b> enter / exit car &nbsp; <b>F</b> punch &nbsp; <b>R</b> change radio<br>
+      <b>T</b> retry mission &nbsp; <b>P / Esc</b> resume
+    </div>
+    <div>
+      <button id="btn-resume">Resume</button>
+      <button id="btn-quit-pause" class="secondary">Quit to Title</button>
+    </div>
+  </div>
+</div>
+
+<div id="end-screen" class="overlay">
+  <div class="card panel">
+    <h1 id="end-title">WASTED</h1>
+    <div id="end-lines"></div>
+    <div>
+      <button id="btn-retry">Retry Mission</button>
+      <button id="btn-restart">Respawn</button>
+      <button id="btn-end-title" class="secondary">Title</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
