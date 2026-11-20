@@ -88,7 +88,7 @@ export function generateCity(random) {
   const packageSpots = [
     { x: -203, z: -180 }, { x: 29, z: -29 }, { x: 203, z: 203 }, { x: 318, z: 60 },
     { x: 58, z: 322 }, { x: -261, z: 87 }, { x: 87, z: -203 }, { x: -87, z: 261 },
-    { x: 261, z: -87 }, { x: 0, z: -368 },
+    { x: 261, z: -87 }, { x: 0, z: -360 },
   ];
   for (const p of packageSpots) packages.push({ ...p, taken: false });
 

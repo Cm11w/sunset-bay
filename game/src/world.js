@@ -308,14 +308,14 @@ export function createWorld(random) {
       // Carjacking: the driver bails and runs.
       car.driver = null;
       car.ai = null;
+      const witnessed = state.peds.some((ped) => dist2d(p.x, p.z, ped.x, ped.z) < 45)
+        || state.cars.some((c) => c.ai === 'police' && dist2d(p.x, p.z, c.x, c.z) < 60);
       state.peds.push({
         x: car.x + 2, z: car.z + 2, heading: random() * TWO_PI, speed: 4,
         color: [0.9, 0.3, 0.3], walkPhase: 0, flee: 4, lastCross: '',
         skin: [0.85, 0.65, 0.45],
       });
       state.stats.carsStolen += 1;
-      const witnessed = state.peds.some((ped) => dist2d(p.x, p.z, ped.x, ped.z) < 45)
-        || state.cars.some((c) => c.ai === 'police' && dist2d(p.x, p.z, c.x, c.z) < 60);
       if (witnessed) addWanted(1, 'Carjacking witnessed — wanted!');
       else say('Nice ride. Nobody saw a thing.');
       event('carjack');
@@ -528,9 +528,12 @@ export function createWorld(random) {
     const cops = state.cars.filter((c) => c.ai === 'police');
     if (state.wanted > 0) {
       const nearestCop = cops.reduce((m, c) => Math.min(m, dist2d(px, pz, c.x, c.z)), Infinity);
-      const seen = nearestCop < 55 || state.heli.active;
-      if (!seen) {
-        state.hiddenTimer += dt;
+      const copSeen = nearestCop < 55;
+      // The helicopter slows the escape but can never prevent it: while it is
+      // up, the hidden timer still runs at half speed, so a player who breaks
+      // away from every cruiser loses the heat (twice as slowly at wanted 3+).
+      if (!copSeen) {
+        state.hiddenTimer += dt * (state.heli.active ? 0.5 : 1);
         if (state.hiddenTimer > WANTED.loseTime) {
           state.wanted = 0;
           state.hiddenTimer = 0;

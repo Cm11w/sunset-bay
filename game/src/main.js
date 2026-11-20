@@ -173,6 +173,14 @@ function retryMission() {
   s.wanted = 0;
   s.heli.active = false;
   s.player.arrest = 0;
+  // Clear every police cruiser and roadblock: stepPoliceCar chases and rams
+  // the player regardless of wanted level, while the wanted-0 cleanup in
+  // world.js despawns only ~0.2 cruisers/s — without this, a retry after
+  // WASTED at wanted 3 drops the player on foot next to live cruisers
+  // that ram them to death within seconds.
+  for (let i = s.cars.length - 1; i >= 0; i -= 1) {
+    if (s.cars[i].ai === 'police' || s.cars[i].ai === 'roadblock') s.cars.splice(i, 1);
+  }
   hud.hideEnd();
   missions.retry();
   screen = 'play';
